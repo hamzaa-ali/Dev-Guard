@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% block title %}Reports{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <h2><i class="fas fa-file-arrow-down"></i> Reports</h2>
+        <p>Export scan results as CSV or PDF</p>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-header">
+        <h3><i class="fas fa-file-export"></i> Export Reports</h3>
+    </div>
+    <div class="empty-state">
+        <i class="fas fa-file-circle-xmark empty-icon"></i>
+        <p>No reports available</p>
+        <span>Complete a scan first, then export your results here</span>
+    </div>
+</div>
+{% endblock %}

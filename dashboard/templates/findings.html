@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% block title %}Findings{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <h2><i class="fas fa-triangle-exclamation"></i> Findings</h2>
+        <p>All vulnerabilities detected across all scans</p>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-header">
+        <h3><i class="fas fa-list-check"></i> All Findings</h3>
+    </div>
+    <div class="empty-state">
+        <i class="fas fa-shield-check empty-icon"></i>
+        <p>No findings yet</p>
+        <span>Vulnerabilities detected during scans will appear here</span>
+    </div>
+</div>
+{% endblock %}

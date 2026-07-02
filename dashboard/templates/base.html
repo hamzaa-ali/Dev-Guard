@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DevGuard — {% block title %}Dashboard{% endblock %}</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/main.css') }}">
+</head>
+<body>
+
+    <!-- TOP NAVBAR -->
+    <nav class="navbar">
+        <div class="navbar-left">
+            <i class="fas fa-shield-halved navbar-logo-icon"></i>
+            <span class="navbar-logo-text">DevGuard</span>
+        </div>
+        <div class="navbar-right">
+            <div class="navbar-user">
+                <i class="fas fa-circle-user"></i>
+                <span>{{ current_user.username }}</span>
+            </div>
+            <a href="{{ url_for('logout') }}" class="btn-logout">
+                <i class="fas fa-arrow-right-from-bracket"></i>
+                Logout
+            </a>
+        </div>
+    </nav>
+
+    <!-- MAIN LAYOUT -->
+    <div class="layout">
+
+        <!-- SIDEBAR -->
+        <aside class="sidebar">
+            <div class="sidebar-section-label">MAIN MENU</div>
+            <ul class="sidebar-menu">
+                <li>
+                    <a href="{{ url_for('dashboard') }}"
+                       class="{{ 'active' if request.endpoint == 'dashboard' else '' }}">
+                        <i class="fas fa-gauge-high"></i>
+                        <span>Dashboard</span>
+                    </a>
+                </li>
+                <li>
+                    <a href="{{ url_for('scans') }}"
+                       class="{{ 'active' if request.endpoint == 'scans' else '' }}">
+                        <i class="fas fa-magnifying-glass-chart"></i>
+                        <span>Scans</span>
+                    </a>
+                </li>
+                <li>
+                    <a href="{{ url_for('findings') }}"
+                       class="{{ 'active' if request.endpoint == 'findings' else '' }}">
+                        <i class="fas fa-triangle-exclamation"></i>
+                        <span>Findings</span>
+                    </a>
+                </li>
+                <li>
+                    <a href="{{ url_for('repositories') }}"
+                       class="{{ 'active' if request.endpoint == 'repositories' else '' }}">
+                        <i class="fas fa-code-branch"></i>
+                        <span>Repositories</span>
+                    </a>
+                </li>
+            </ul>
+
+            <div class="sidebar-section-label">ANALYTICS</div>
+            <ul class="sidebar-menu">
+                <li>
+                    <a href="{{ url_for('posture') }}"
+                       class="{{ 'active' if request.endpoint == 'posture' else '' }}">
+                        <i class="fas fa-chart-line"></i>
+                        <span>Posture Score</span>
+                    </a>
+                </li>
+                <li>
+                    <a href="{{ url_for('reports') }}"
+                       class="{{ 'active' if request.endpoint == 'reports' else '' }}">
+                        <i class="fas fa-file-arrow-down"></i>
+                        <span>Reports</span>
+                    </a>
+                </li>
+            </ul>
+        </aside>
+
+        <!-- PAGE CONTENT -->
+        <main class="content">
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                    {% for category, message in messages %}
+                    <div class="alert alert-{{ category }}">
+                        <i class="fas fa-circle-info"></i>
+                        <span>{{ message }}</span>
+                    </div>
+                    {% endfor %}
+                {% endif %}
+            {% endwith %}
+
+            {% block content %}{% endblock %}
+        </main>
+
+    </div>
+
+</body>
+</html>

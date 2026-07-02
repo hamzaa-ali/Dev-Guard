@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% block title %}Repositories{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <h2><i class="fas fa-code-branch"></i> Repositories</h2>
+        <p>Manage connected repositories and configure scanner settings</p>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-header">
+        <h3><i class="fas fa-folder-open"></i> Connected Repositories</h3>
+    </div>
+    <div class="empty-state">
+        <i class="fas fa-code-branch empty-icon"></i>
+        <p>No repositories connected</p>
+        <span>Repositories appear here when they send their first webhook event</span>
+    </div>
+</div>
+{% endblock %}

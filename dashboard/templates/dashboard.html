@@ -1,0 +1,126 @@
+{% extends "base.html" %}
+{% block title %}Dashboard{% endblock %}
+
+{% block content %}
+
+<div class="page-header">
+    <div>
+        <h2><i class="fas fa-gauge-high"></i> Security Dashboard</h2>
+        <p>Real-time security overview across all your repositories</p>
+    </div>
+    <div class="page-header-actions">
+        <span class="badge-live"><i class="fas fa-circle"></i> Live</span>
+    </div>
+</div>
+
+<!-- STAT CARDS -->
+<div class="stats-grid">
+    <div class="stat-card critical">
+        <div class="stat-icon"><i class="fas fa-circle-xmark"></i></div>
+        <div class="stat-info">
+            <span class="stat-number">0</span>
+            <span class="stat-label">Critical</span>
+        </div>
+        <div class="stat-trend">—</div>
+    </div>
+    <div class="stat-card high">
+        <div class="stat-icon"><i class="fas fa-triangle-exclamation"></i></div>
+        <div class="stat-info">
+            <span class="stat-number">0</span>
+            <span class="stat-label">High</span>
+        </div>
+        <div class="stat-trend">—</div>
+    </div>
+    <div class="stat-card medium">
+        <div class="stat-icon"><i class="fas fa-circle-exclamation"></i></div>
+        <div class="stat-info">
+            <span class="stat-number">0</span>
+            <span class="stat-label">Medium</span>
+        </div>
+        <div class="stat-trend">—</div>
+    </div>
+    <div class="stat-card low">
+        <div class="stat-icon"><i class="fas fa-circle-check"></i></div>
+        <div class="stat-info">
+            <span class="stat-number">0</span>
+            <span class="stat-label">Low</span>
+        </div>
+        <div class="stat-trend">—</div>
+    </div>
+</div>
+
+<!-- POSTURE + CHART ROW -->
+<div class="two-col-grid">
+
+    <div class="card">
+        <div class="card-header">
+            <h3><i class="fas fa-shield-check"></i> Security Posture Score</h3>
+        </div>
+        <div class="posture-display">
+            <div class="posture-ring">
+                <span class="posture-number">—</span>
+                <span class="posture-out-of">/10</span>
+            </div>
+            <div class="posture-meta">
+                <span class="posture-status neutral">No scans yet</span>
+                <span class="posture-hint">Run your first scan to see your score</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-header">
+            <h3><i class="fas fa-chart-donut"></i> Findings by Severity</h3>
+        </div>
+        <div class="chart-wrapper">
+            <canvas id="severityChart"></canvas>
+        </div>
+    </div>
+
+</div>
+
+<!-- RECENT SCANS TABLE -->
+<div class="card">
+    <div class="card-header">
+        <h3><i class="fas fa-clock-rotate-left"></i> Recent Scans</h3>
+        <a href="{{ url_for('scans') }}" class="card-link">View all →</a>
+    </div>
+    <div class="empty-state">
+        <i class="fas fa-magnifying-glass empty-icon"></i>
+        <p>No scans yet</p>
+        <span>Push code to a connected repository to trigger your first scan</span>
+    </div>
+</div>
+
+<script>
+const ctx = document.getElementById('severityChart').getContext('2d');
+new Chart(ctx, {
+    type: 'doughnut',
+    data: {
+        labels: ['Critical', 'High', 'Medium', 'Low'],
+        datasets: [{
+            data: [1, 1, 1, 1],
+            backgroundColor: ['#ef4444','#f97316','#eab308','#22c55e'],
+            borderWidth: 0,
+            hoverOffset: 6
+        }]
+    },
+    options: {
+        responsive: true,
+        cutout: '70%',
+        plugins: {
+            legend: {
+                position: 'bottom',
+                labels: {
+                    color: '#94a3b8',
+                    padding: 16,
+                    font: { family: 'Inter', size: 12 }
+                }
+            },
+            tooltip: { enabled: true }
+        }
+    }
+});
+</script>
+
+{% endblock %}
