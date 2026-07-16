@@ -5,8 +5,9 @@ import shutil
 import stat
 from datetime import datetime
 
-from pipeline.queue_manager import get_job, mark_job_done
-from pipeline.scan_engine   import run_all_scanners
+from pipeline.queue_manager       import get_job, mark_job_done
+from pipeline.scan_engine         import run_all_scanners
+from pipeline.confidence_filter   import apply_confidence_filter
 
 logger = logging.getLogger(__name__)
 
@@ -32,12 +33,12 @@ def cleanup_clone(clone_path):
 
 def save_findings_to_db(db, scan_id, findings, severity_threshold):
     """
-    Save all normalized findings to the database.
+    Save all filtered findings to the database.
 
     Parameters:
     - db:                 SQLAlchemy db instance
     - scan_id:            ID of the current scan record
-    - findings:           list of normalized finding dicts from parser
+    - findings:           list of findings with confidence scores added
     - severity_threshold: minimum severity to save (from repo config)
     """
     from shared.models import Finding
@@ -60,16 +61,15 @@ def save_findings_to_db(db, scan_id, findings, severity_threshold):
             message             = f.get('message', ''),
             raw_severity        = f.get('raw_severity', ''),
             normalized_severity = f.get('normalized_severity', 0.0),
-            # Confidence filter comes in Day 8
-            # For now default everything to Confirmed
-            confidence_label    = 'Confirmed',
-            confidence_score    = 8.0,
+            confidence_label    = f.get('confidence_label', 'Confirmed'),
+            confidence_score    = f.get('confidence_score', 8.0),
         )
         db.session.add(finding)
         saved_count += 1
 
     db.session.commit()
-    logger.info(f"[WORKER] Saved {saved_count} findings. Skipped {skipped_count} below threshold.")
+    logger.info(f"[WORKER] Saved {saved_count} findings. "
+                f"Skipped {skipped_count} below threshold.")
     return saved_count
 
 
@@ -82,22 +82,29 @@ def process_job(job, app):
     2. Create scan record with status 'running'
     3. Clone the repository
     4. Run all three scanners in parallel
-    5. Save all findings to database
-    6. Mark scan as completed
-    7. Clean up cloned folder
+    5. Apply confidence filter to all findings
+    6. Save findings to database
+    7. Mark scan as completed
+    8. Clean up cloned folder
     """
     from shared.models import db, Scan, Repo
 
-    repo_name         = job['repo_name']
-    repo_url          = job['repo_url']
-    commit_hash       = job['commit_hash']
-    config            = job['config']
+    repo_name          = job['repo_name']
+    repo_url           = job['repo_url']
+    commit_hash        = job['commit_hash']
+    config             = job['config']
     severity_threshold = config.get('severity_threshold', 0.0)
 
-    logger.info(f"[WORKER] ── Starting job: {repo_name} | commit: {commit_hash[:7]} ──")
+    logger.info(
+        f"[WORKER] ── Starting job: {repo_name} | "
+        f"commit: {commit_hash[:7]} ──"
+    )
 
     timestamp  = datetime.utcnow().strftime('%Y%m%d_%H%M%S')
-    clone_path = os.path.join(CLONE_BASE_DIR, f"{repo_name}_{timestamp}")
+    clone_path = os.path.join(
+        CLONE_BASE_DIR,
+        f"{repo_name}_{timestamp}"
+    )
 
     with app.app_context():
 
@@ -129,19 +136,29 @@ def process_job(job, app):
             logger.info(f"[WORKER] Clone complete.")
 
             # ── STEP 4: Run all scanners in parallel ──
-            logger.info(f"[WORKER] Running scanners on {clone_path}...")
+            logger.info(f"[WORKER] Running scanners...")
             findings = run_all_scanners(clone_path, config)
-            logger.info(f"[WORKER] Scan engine returned {len(findings)} total findings")
+            logger.info(
+                f"[WORKER] Scan engine returned "
+                f"{len(findings)} total findings"
+            )
 
-            # ── STEP 5: Save findings to database ──
-            saved = save_findings_to_db(db, scan.id, findings, severity_threshold)
+            # ── STEP 5: Apply confidence filter ──
+            findings = apply_confidence_filter(findings)
+
+            # ── STEP 6: Save findings to database ──
+            saved = save_findings_to_db(
+                db, scan.id, findings, severity_threshold
+            )
             logger.info(f"[WORKER] {saved} findings saved to database")
 
-            # ── STEP 6: Mark scan as completed ──
+            # ── STEP 7: Mark scan as completed ──
             scan.status       = 'completed'
             scan.completed_at = datetime.utcnow()
             db.session.commit()
-            logger.info(f"[WORKER] ── Scan {scan.id} completed successfully ──")
+            logger.info(
+                f"[WORKER] ── Scan {scan.id} completed successfully ──"
+            )
 
         except Exception as e:
             logger.error(f"[WORKER] Scan failed: {str(e)}")
@@ -154,7 +171,7 @@ def process_job(job, app):
 
 
 def worker_loop(app):
-    """Runs forever. Checks queue every second. Processes jobs as they arrive."""
+    """Runs forever. Checks queue every second."""
     logger.info("[WORKER] Worker thread started. Waiting for jobs...")
 
     while True:
@@ -163,7 +180,9 @@ def worker_loop(app):
             try:
                 process_job(job, app)
             except Exception as e:
-                logger.error(f"[WORKER] Unexpected error: {str(e)}")
+                logger.error(
+                    f"[WORKER] Unexpected error: {str(e)}"
+                )
             finally:
                 mark_job_done()
 
