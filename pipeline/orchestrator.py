@@ -163,3 +163,36 @@ def webhook_status():
         'status':     'running',
         'queue_size': queue_size()
     }), 200
+
+
+@pipeline_bp.route('/webhook/blocked-push', methods=['POST'])
+def blocked_push():
+    """
+    Called when a push is blocked by the pre-push hook.
+    Records the blocked push count for the dashboard.
+    """
+    from shared.models import db, Repo
+
+    payload = request.get_json()
+    if not payload:
+        return jsonify({'error': 'Invalid payload'}), 400
+
+    repo_name = payload.get('repo_name', '')
+    repo_url  = payload.get('repo_url', '')
+
+    if not repo_name:
+        return jsonify({'error': 'Missing repo_name'}), 400
+
+    repo = Repo.query.filter_by(github_url=repo_url).first()
+    if repo:
+        repo.blocked_pushes += 1
+        db.session.commit()
+        logger.info(
+            f"[WEBHOOK] Blocked push recorded for: {repo_name} "
+            f"| Total blocked: {repo.blocked_pushes}"
+        )
+
+    return jsonify({
+        'message': 'Blocked push recorded',
+        'repo':    repo_name
+    }), 200

@@ -41,6 +41,7 @@ class Repo(db.Model):
     name       = db.Column(db.String(200), nullable=False)
     github_url = db.Column(db.String(500), nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    blocked_pushes = db.Column(db.Integer, default=0)
 
     # Links to other tables
     config         = db.relationship('RepoConfig', backref='repo', uselist=False)

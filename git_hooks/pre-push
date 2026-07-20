@@ -1,0 +1,44 @@
+#!/bin/sh
+echo ""
+echo "╔══════════════════════════════════════════╗"
+echo "║     DevGuard Shift-Left Security Check   ║"
+echo "╚══════════════════════════════════════════╝"
+echo ""
+
+if ! command -v gitleaks >/dev/null 2>&1; then
+    echo "WARNING: Gitleaks not installed. Skipping secret scan."
+    exit 0
+fi
+
+echo "Scanning for hardcoded secrets..."
+echo ""
+
+# Use our custom config if it exists, otherwise use defaults
+if [ -f ".gitleaks.toml" ]; then
+    gitleaks detect --source . --no-git --config .gitleaks.toml --exit-code 1 --redact 2>/dev/null
+else
+    gitleaks detect --source . --no-git --exit-code 1 --redact 2>/dev/null
+fi
+
+GITLEAKS_EXIT=$?
+
+echo ""
+
+if [ $GITLEAKS_EXIT -eq 0 ]; then
+    echo "✅ No secrets detected. Push proceeding..."
+    echo ""
+    exit 0
+else
+    echo "🚨 PUSH BLOCKED — Hardcoded secrets detected!"
+    echo ""
+    echo "   DevGuard found secrets in your code."
+    echo "   Your push has been BLOCKED."
+    echo ""
+    echo "   Steps to fix:"
+    echo "   1. Remove the secret from your code"
+    echo "   2. Use environment variables or .env files"
+    echo "   3. Add sensitive files to .gitignore"
+    echo "   4. Try pushing again"
+    echo ""
+    exit 1
+fi

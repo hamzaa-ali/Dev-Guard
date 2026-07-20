@@ -220,3 +220,8 @@ venv/
 .env
 tmp_scans/
 *.pyc
+# Hook files are installed locally
+.git/hooks/
+
+# Gitleaks
+.gitleaks.toml
