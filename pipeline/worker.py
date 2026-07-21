@@ -5,9 +5,13 @@ import shutil
 import stat
 from datetime import datetime
 
-from pipeline.queue_manager       import get_job, mark_job_done
-from pipeline.scan_engine         import run_all_scanners
-from pipeline.confidence_filter   import apply_confidence_filter
+from pipeline.queue_manager     import get_job, mark_job_done
+from pipeline.scan_engine       import run_all_scanners
+from pipeline.confidence_filter import apply_confidence_filter
+from pipeline.posture_score     import (
+    calculate_posture_score,
+    save_posture_score
+)
 
 logger = logging.getLogger(__name__)
 
@@ -34,20 +38,14 @@ def cleanup_clone(clone_path):
 def save_findings_to_db(db, scan_id, findings, severity_threshold):
     """
     Save all filtered findings to the database.
-
-    Parameters:
-    - db:                 SQLAlchemy db instance
-    - scan_id:            ID of the current scan record
-    - findings:           list of findings with confidence scores added
-    - severity_threshold: minimum severity to save (from repo config)
+    Returns list of saved Finding objects for posture scoring.
     """
     from shared.models import Finding
 
-    saved_count   = 0
-    skipped_count = 0
+    saved_findings = []
+    skipped_count  = 0
 
     for f in findings:
-        # Skip findings below the configured severity threshold
         if f['normalized_severity'] < severity_threshold:
             skipped_count += 1
             continue
@@ -65,12 +63,15 @@ def save_findings_to_db(db, scan_id, findings, severity_threshold):
             confidence_score    = f.get('confidence_score', 8.0),
         )
         db.session.add(finding)
-        saved_count += 1
+        saved_findings.append(finding)
 
     db.session.commit()
-    logger.info(f"[WORKER] Saved {saved_count} findings. "
-                f"Skipped {skipped_count} below threshold.")
-    return saved_count
+
+    logger.info(
+        f"[WORKER] Saved {len(saved_findings)} findings. "
+        f"Skipped {skipped_count} below threshold."
+    )
+    return saved_findings
 
 
 def process_job(job, app):
@@ -82,10 +83,12 @@ def process_job(job, app):
     2. Create scan record with status 'running'
     3. Clone the repository
     4. Run all three scanners in parallel
-    5. Apply confidence filter to all findings
+    5. Apply confidence filter
     6. Save findings to database
-    7. Mark scan as completed
-    8. Clean up cloned folder
+    7. Calculate Security Posture Score
+    8. Save posture score to database
+    9. Mark scan as completed
+    10. Clean up cloned folder
     """
     from shared.models import db, Scan, Repo
 
@@ -147,17 +150,26 @@ def process_job(job, app):
             findings = apply_confidence_filter(findings)
 
             # ── STEP 6: Save findings to database ──
-            saved = save_findings_to_db(
+            saved_findings = save_findings_to_db(
                 db, scan.id, findings, severity_threshold
             )
-            logger.info(f"[WORKER] {saved} findings saved to database")
+            logger.info(
+                f"[WORKER] {len(saved_findings)} findings saved"
+            )
 
-            # ── STEP 7: Mark scan as completed ──
+            # ── STEP 7: Calculate posture score ──
+            score, breakdown = calculate_posture_score(saved_findings)
+
+            # ── STEP 8: Save posture score ──
+            save_posture_score(db, scan.id, repo.id, score)
+
+            # ── STEP 9: Mark scan as completed ──
             scan.status       = 'completed'
             scan.completed_at = datetime.utcnow()
             db.session.commit()
             logger.info(
-                f"[WORKER] ── Scan {scan.id} completed successfully ──"
+                f"[WORKER] ── Scan {scan.id} completed. "
+                f"Posture score: {score}/10 ──"
             )
 
         except Exception as e:

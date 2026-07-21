@@ -9,14 +9,207 @@
     </div>
 </div>
 
+<!-- CURRENT SCORE CARD -->
+<div class="two-col-grid">
+    <div class="card">
+        <div class="card-header">
+            <h3><i class="fas fa-shield-check"></i> Current Score</h3>
+        </div>
+        <div class="posture-display">
+            <div class="posture-ring">
+                {% if current_score is not none %}
+                    <span class="posture-number {{ score_class }}">
+                        {{ current_score }}
+                    </span>
+                    <span class="posture-out-of">/10</span>
+                {% else %}
+                    <span class="posture-number">—</span>
+                    <span class="posture-out-of">/10</span>
+                {% endif %}
+            </div>
+            <div class="posture-meta">
+                <span class="posture-status {{ score_class if current_score is not none else 'neutral' }}">
+                    {{ score_label }}
+                </span>
+            </div>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-header">
+            <h3><i class="fas fa-info-circle"></i> Score Guide</h3>
+        </div>
+        <div style="padding: 20px 24px;">
+            <div class="score-guide-item">
+                <span class="score-guide-range score-excellent">8.0 – 10.0</span>
+                <span class="score-guide-label">Excellent</span>
+            </div>
+            <div class="score-guide-item">
+                <span class="score-guide-range score-good">6.0 – 7.9</span>
+                <span class="score-guide-label">Good</span>
+            </div>
+            <div class="score-guide-item">
+                <span class="score-guide-range score-fair">4.0 – 5.9</span>
+                <span class="score-guide-label">Fair</span>
+            </div>
+            <div class="score-guide-item">
+                <span class="score-guide-range score-poor">2.0 – 3.9</span>
+                <span class="score-guide-label">Poor</span>
+            </div>
+            <div class="score-guide-item">
+                <span class="score-guide-range score-critical">0.0 – 1.9</span>
+                <span class="score-guide-label">Critical</span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- TREND CHART -->
 <div class="card">
     <div class="card-header">
         <h3><i class="fas fa-chart-area"></i> Score Trend</h3>
     </div>
+
+    {% if all_scores %}
+    <div style="padding: 20px 24px;">
+        <canvas id="postureChart" height="100"></canvas>
+    </div>
+    {% else %}
     <div class="empty-state">
         <i class="fas fa-chart-line empty-icon"></i>
         <p>No posture history yet</p>
-        <span>Complete at least two scans to see your trend line</span>
+        <span>Complete at least one scan to see your score trend</span>
+    </div>
+    {% endif %}
+</div>
+
+<!-- SCORE HISTORY TABLE -->
+{% if all_scores %}
+<div class="card">
+    <div class="card-header">
+        <h3><i class="fas fa-clock-rotate-left"></i> Score History</h3>
+    </div>
+    <div class="table-wrapper">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Date</th>
+                    <th>Score</th>
+                    <th>Previous Score</th>
+                    <th>Change</th>
+                    <th>Status</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for s in all_scores | reverse %}
+                <tr>
+                    <td>
+                        {{ s.created_at.strftime('%Y-%m-%d %H:%M')
+                           if s.created_at else '—' }}
+                    </td>
+                    <td>
+                        <strong style="color:var(--accent)">
+                            {{ s.score }}/10
+                        </strong>
+                    </td>
+                    <td>
+                        {{ s.previous_score ~ '/10'
+                           if s.previous_score is not none else '—' }}
+                    </td>
+                    <td>
+                        {% if s.previous_score is not none %}
+                            {% set change = s.score - s.previous_score %}
+                            {% if change > 0 %}
+                                <span style="color:#22c55e">
+                                    ▲ +{{ "%.1f"|format(change) }}
+                                </span>
+                            {% elif change < 0 %}
+                                <span style="color:#ef4444">
+                                    ▼ {{ "%.1f"|format(change) }}
+                                </span>
+                            {% else %}
+                                <span style="color:#64748b">→ 0.0</span>
+                            {% endif %}
+                        {% else %}
+                            <span style="color:#64748b">First scan</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if s.score >= 8.0 %}
+                            <span class="confidence-badge conf-confirmed">
+                                Excellent
+                            </span>
+                        {% elif s.score >= 6.0 %}
+                            <span class="confidence-badge conf-confirmed">
+                                Good
+                            </span>
+                        {% elif s.score >= 4.0 %}
+                            <span class="confidence-badge conf-review">
+                                Fair
+                            </span>
+                        {% else %}
+                            <span class="severity-badge sev-critical">
+                                Poor
+                            </span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
     </div>
 </div>
+
+<script>
+const ctx = document.getElementById('postureChart').getContext('2d');
+new Chart(ctx, {
+    type: 'line',
+    data: {
+        labels: {{ chart_labels | tojson }},
+        datasets: [{
+            label: 'Security Posture Score',
+            data: {{ chart_data | tojson }},
+            borderColor: '#00d4ff',
+            backgroundColor: 'rgba(0,212,255,0.08)',
+            borderWidth: 2,
+            pointBackgroundColor: '#00d4ff',
+            pointRadius: 5,
+            pointHoverRadius: 7,
+            fill: true,
+            tension: 0.3
+        }]
+    },
+    options: {
+        responsive: true,
+        scales: {
+            y: {
+                min: 0,
+                max: 10,
+                grid: { color: 'rgba(255,255,255,0.05)' },
+                ticks: {
+                    color: '#64748b',
+                    font: { family: 'Inter' }
+                }
+            },
+            x: {
+                grid: { color: 'rgba(255,255,255,0.05)' },
+                ticks: {
+                    color: '#64748b',
+                    font: { family: 'Inter' }
+                }
+            }
+        },
+        plugins: {
+            legend: { display: false },
+            tooltip: {
+                callbacks: {
+                    label: ctx => `Score: ${ctx.parsed.y}/10`
+                }
+            }
+        }
+    }
+});
+</script>
+{% endif %}
+
 {% endblock %}

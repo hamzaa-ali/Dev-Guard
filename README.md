@@ -10,3 +10,4 @@ Intelligent DevSecOps Platform for Automated Vulnerability Detection.
 
 ## Status
 Pipeline: Active ✅
+

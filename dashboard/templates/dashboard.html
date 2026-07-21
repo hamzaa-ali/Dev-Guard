@@ -2,11 +2,10 @@
 {% block title %}Dashboard{% endblock %}
 
 {% block content %}
-
 <div class="page-header">
     <div>
         <h2><i class="fas fa-gauge-high"></i> Security Dashboard</h2>
-        <p>Real-time security overview across all your repositories</p>
+        <p>Real-time security overview across all repositories</p>
     </div>
     <div class="page-header-actions">
         <span class="badge-live"><i class="fas fa-circle"></i> Live</span>
@@ -18,52 +17,60 @@
     <div class="stat-card critical">
         <div class="stat-icon"><i class="fas fa-circle-xmark"></i></div>
         <div class="stat-info">
-            <span class="stat-number">0</span>
+            <span class="stat-number">{{ critical_count }}</span>
             <span class="stat-label">Critical</span>
         </div>
-        <div class="stat-trend">—</div>
     </div>
     <div class="stat-card high">
         <div class="stat-icon"><i class="fas fa-triangle-exclamation"></i></div>
         <div class="stat-info">
-            <span class="stat-number">0</span>
+            <span class="stat-number">{{ high_count }}</span>
             <span class="stat-label">High</span>
         </div>
-        <div class="stat-trend">—</div>
     </div>
     <div class="stat-card medium">
         <div class="stat-icon"><i class="fas fa-circle-exclamation"></i></div>
         <div class="stat-info">
-            <span class="stat-number">0</span>
+            <span class="stat-number">{{ medium_count }}</span>
             <span class="stat-label">Medium</span>
         </div>
-        <div class="stat-trend">—</div>
     </div>
     <div class="stat-card low">
         <div class="stat-icon"><i class="fas fa-circle-check"></i></div>
         <div class="stat-info">
-            <span class="stat-number">0</span>
-            <span class="stat-label">Low</span>
+            <span class="stat-number">{{ total_scans }}</span>
+            <span class="stat-label">Total Scans</span>
         </div>
-        <div class="stat-trend">—</div>
     </div>
 </div>
 
 <!-- POSTURE + CHART ROW -->
 <div class="two-col-grid">
-
     <div class="card">
         <div class="card-header">
             <h3><i class="fas fa-shield-check"></i> Security Posture Score</h3>
         </div>
         <div class="posture-display">
             <div class="posture-ring">
-                <span class="posture-number">—</span>
-                <span class="posture-out-of">/10</span>
+                {% if current_score is not none %}
+                    <span class="posture-number {{ score_class }}">
+                        {{ current_score }}
+                    </span>
+                    <span class="posture-out-of">/10</span>
+                {% else %}
+                    <span class="posture-number">—</span>
+                    <span class="posture-out-of">/10</span>
+                {% endif %}
             </div>
             <div class="posture-meta">
-                <span class="posture-status neutral">No scans yet</span>
-                <span class="posture-hint">Run your first scan to see your score</span>
+                <span class="posture-status {{ score_class if current_score is not none else 'neutral' }}">
+                    {{ score_label }}
+                </span>
+                {% if current_score is none %}
+                <span class="posture-hint">
+                    Run your first scan to see your score
+                </span>
+                {% endif %}
             </div>
         </div>
     </div>
@@ -76,7 +83,6 @@
             <canvas id="severityChart"></canvas>
         </div>
     </div>
-
 </div>
 
 <!-- RECENT SCANS TABLE -->
@@ -85,11 +91,59 @@
         <h3><i class="fas fa-clock-rotate-left"></i> Recent Scans</h3>
         <a href="{{ url_for('scans') }}" class="card-link">View all →</a>
     </div>
+
+    {% if recent_scans %}
+    <div class="table-wrapper">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Repository</th>
+                    <th>Commit</th>
+                    <th>Status</th>
+                    <th>Started</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for scan in recent_scans %}
+                <tr>
+                    <td>#{{ scan.id }}</td>
+                    <td>{{ scan.repo.name if scan.repo else 'Unknown' }}</td>
+                    <td>
+                        <code class="commit-hash">
+                            {{ scan.commit_hash[:7] if scan.commit_hash else '—' }}
+                        </code>
+                    </td>
+                    <td>
+                        <span class="status-badge status-{{ scan.status }}">
+                            {% if scan.status == 'completed' %}
+                                <i class="fas fa-circle-check"></i>
+                            {% elif scan.status == 'running' %}
+                                <i class="fas fa-spinner fa-spin"></i>
+                            {% elif scan.status == 'failed' %}
+                                <i class="fas fa-circle-xmark"></i>
+                            {% else %}
+                                <i class="fas fa-clock"></i>
+                            {% endif %}
+                            {{ scan.status | capitalize }}
+                        </span>
+                    </td>
+                    <td>
+                        {{ scan.started_at.strftime('%Y-%m-%d %H:%M')
+                           if scan.started_at else '—' }}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
     <div class="empty-state">
         <i class="fas fa-magnifying-glass empty-icon"></i>
         <p>No scans yet</p>
         <span>Push code to a connected repository to trigger your first scan</span>
     </div>
+    {% endif %}
 </div>
 
 <script>
@@ -99,8 +153,15 @@ new Chart(ctx, {
     data: {
         labels: ['Critical', 'High', 'Medium', 'Low'],
         datasets: [{
-            data: [1, 1, 1, 1],
-            backgroundColor: ['#ef4444','#f97316','#eab308','#22c55e'],
+            data: [
+                {{ critical_count }},
+                {{ high_count }},
+                {{ medium_count }},
+                {{ low_count }}
+            ],
+            backgroundColor: [
+                '#ef4444','#f97316','#eab308','#22c55e'
+            ],
             borderWidth: 0,
             hoverOffset: 6
         }]
@@ -116,11 +177,9 @@ new Chart(ctx, {
                     padding: 16,
                     font: { family: 'Inter', size: 12 }
                 }
-            },
-            tooltip: { enabled: true }
+            }
         }
     }
 });
 </script>
-
 {% endblock %}
