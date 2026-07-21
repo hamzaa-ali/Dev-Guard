@@ -103,7 +103,7 @@ def register_routes(app, login_manager):
         )
 
     # ── SCANS ──
-    python@app.route('/scans')
+    @app.route('/scans')
     @login_required
     def scans():
         from shared.models import Scan
@@ -119,22 +119,20 @@ def register_routes(app, login_manager):
             Finding.normalized_severity.desc()
         ).all()
         return render_template('findings.html', findings=all_findings)
-    all_findings = Finding.query.order_by(
-        Finding.normalized_severity.desc()
-    ).all()
+    
 
-    return render_template(
-        'findings.html',
-        findings=all_findings
-    )
-    # ── REPOSITORIES ──
+# ── REPOSITORIES ──
     @app.route('/repositories')
     @login_required
     def repositories():
         from shared.models import Repo
-        repos = Repo.query.order_by(Repo.created_at.desc()).all()
-        return render_template('repositories.html', repos=repos)
-
+        repos = Repo.query.order_by(
+            Repo.created_at.desc()
+    ).all()
+        return render_template(
+            'repositories.html',
+            repos=repos
+    )
     # ── POSTURE SCORE ──
     @app.route('/posture')
     @login_required

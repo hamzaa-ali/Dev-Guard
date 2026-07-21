@@ -1,22 +1,70 @@
-{% extends "base.html" %}
-{% block title %}Repositories{% endblock %}
+{% extends "base.html" %} 
 
-{% block content %}
-<div class="page-header">
-    <div>
-        <h2><i class="fas fa-code-branch"></i> Repositories</h2>
-        <p>Manage connected repositories and configure scanner settings</p>
-    </div>
-</div>
+{% block title %}Repositories{% endblock %} 
 
-<div class="card">
-    <div class="card-header">
-        <h3><i class="fas fa-folder-open"></i> Connected Repositories</h3>
-    </div>
-    <div class="empty-state">
-        <i class="fas fa-code-branch empty-icon"></i>
-        <p>No repositories connected</p>
-        <span>Repositories appear here when they send their first webhook event</span>
-    </div>
-</div>
+{% block content %} 
+<div class="page-header"> 
+    <div> 
+        <h2><i class="fas fa-code-branch"></i> Repositories</h2> 
+        <p>Connected repositories and shift-left security metrics</p> 
+    </div> 
+</div> 
+
+<div class="card"> 
+    <div class="card-header"> 
+        <h3><i class="fas fa-folder-open"></i> Connected Repositories</h3> 
+    </div> 
+
+    {% if repos %} 
+    <div class="table-wrapper"> 
+        <table class="data-table"> 
+            <thead> 
+                <tr> 
+                    <th>Repository</th> 
+                    <th>GitHub URL</th> 
+                    <th>Connected Since</th> 
+                    <th>Blocked Pushes</th> 
+                </tr> 
+            </thead> 
+            <tbody> 
+                {% for repo in repos %} 
+                <tr> 
+                    <td> 
+                        <span style="font-weight:600; color:var(--text-primary)"> 
+                            <i class="fas fa-code-branch" style="color:var(--accent); margin-right:8px"></i> 
+                            {{ repo.name }} 
+                        </span> 
+                    </td> 
+                    <td> 
+                        <a href="{{ repo.github_url }}" target="_blank" style="color:var(--accent); font-size:0.85rem"> 
+                            {{ repo.github_url }} 
+                        </a> 
+                    </td> 
+                    <td> 
+                        {{ repo.created_at.strftime('%Y-%m-%d') if repo.created_at else '—' }} 
+                    </td> 
+                    <td> 
+                        {% if repo.blocked_pushes > 0 %} 
+                        <span class="severity-badge sev-high"> 
+                            <i class="fas fa-shield-halved"></i> {{ repo.blocked_pushes }} blocked 
+                        </span> 
+                        {% else %} 
+                        <span class="confidence-badge conf-confirmed"> 
+                            <i class="fas fa-circle-check"></i> 0 blocked 
+                        </span> 
+                        {% endif %} 
+                    </td> 
+                </tr> 
+                {% endfor %} 
+            </tbody> 
+        </table> 
+    </div> 
+    {% else %} 
+    <div class="empty-state"> 
+        <i class="fas fa-code-branch empty-icon"></i> 
+        <p>No repositories connected yet</p> 
+        <span>Repositories appear here when they send their first push event</span> 
+    </div> 
+    {% endif %} 
+</div> 
 {% endblock %}
