@@ -8,7 +8,7 @@ with app.app_context():
     db.create_all()
     print("✅ All tables created successfully.")
 
-    # Create one default admin user so you can log in
+    # Create one default admgitin user so you can log in
     existing = User.query.filter_by(username='admin').first()
     if not existing:
         admin = User(username='admin')

@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+
 {% block title %}Findings{% endblock %}
 
 {% block content %}
@@ -13,10 +14,84 @@
     <div class="card-header">
         <h3><i class="fas fa-list-check"></i> All Findings</h3>
     </div>
+
+    {% if findings %}
+    <div class="table-wrapper">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Tool</th>
+                    <th>Severity</th>
+                    <th>Rule</th>
+                    <th>File</th>
+                    <th>Line</th>
+                    <th>Message</th>
+                    <th>Confidence</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for f in findings %}
+                <tr>
+                    <td>
+                        <span class="tool-badge tool-{{ f.tool }}">
+                            {{ f.tool | upper }}
+                        </span>
+                    </td>
+
+                    <td>
+                        {% set sev = f.normalized_severity %}
+                        {% if sev >= 9.0 %}
+                            <span class="severity-badge sev-critical">
+                                <i class="fas fa-circle-xmark"></i>
+                                {{ "%.1f"|format(sev) }}
+                            </span>
+                        {% elif sev >= 7.0 %}
+                            <span class="severity-badge sev-high">
+                                <i class="fas fa-triangle-exclamation"></i>
+                                {{ "%.1f"|format(sev) }}
+                            </span>
+                        {% elif sev >= 4.0 %}
+                            <span class="severity-badge sev-medium">
+                                <i class="fas fa-circle-exclamation"></i>
+                                {{ "%.1f"|format(sev) }}
+                            </span>
+                        {% else %}
+                            <span class="severity-badge sev-low">
+                                <i class="fas fa-circle-info"></i>
+                                {{ "%.1f"|format(sev) }}
+                            </span>
+                        {% endif %}
+                    </td>
+
+                    <td>
+                        <code class="commit-hash">
+                            {{ f.rule_id[:30] if f.rule_id else '—' }}
+                        </code>
+                    </td>
+
+                    <td>{{ f.file_path[:40] if f.file_path else '—' }}</td>
+
+                    <td>{{ f.line_number if f.line_number else '—' }}</td>
+
+                    <td>{{ f.message[:100] if f.message else '—' }}</td>
+
+                    <td>
+                        <span class="status-badge status-{{ f.confidence_label | lower | replace(' ', '-') }}">
+                            {{ f.confidence_label }}
+                        </span>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    {% else %}
     <div class="empty-state">
         <i class="fas fa-shield-check empty-icon"></i>
         <p>No findings yet</p>
         <span>Vulnerabilities detected during scans will appear here</span>
     </div>
+    {% endif %}
 </div>
 {% endblock %}

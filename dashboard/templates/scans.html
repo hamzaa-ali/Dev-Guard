@@ -1,10 +1,11 @@
 {% extends "base.html" %}
+
 {% block title %}Scans{% endblock %}
 
 {% block content %}
 <div class="page-header">
     <div>
-        <h2><i class="fas fa-radar"></i> Scans</h2>
+        <h2><i class="fas fa-magnifying-glass-chart"></i> Scans</h2>
         <p>All scan history triggered by code pushes</p>
     </div>
 </div>
@@ -13,10 +14,57 @@
     <div class="card-header">
         <h3><i class="fas fa-list"></i> Scan History</h3>
     </div>
+
+    {% if scans %}
+    <div class="table-wrapper">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Repository</th>
+                    <th>Commit</th>
+                    <th>Status</th>
+                    <th>Started</th>
+                    <th>Completed</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for scan in scans %}
+                <tr>
+                    <td>#{{ scan.id }}</td>
+                    <td>{{ scan.repo.name if scan.repo else 'Unknown' }}</td>
+                    <td>
+                        <code class="commit-hash">
+                            {{ scan.commit_hash[:7] if scan.commit_hash else '—' }}
+                        </code>
+                    </td>
+                    <td>
+                        <span class="status-badge status-{{ scan.status }}">
+                            {% if scan.status == 'completed' %}
+                                <i class="fas fa-circle-check"></i>
+                            {% elif scan.status == 'running' %}
+                                <i class="fas fa-spinner fa-spin"></i>
+                            {% elif scan.status == 'failed' %}
+                                <i class="fas fa-circle-xmark"></i>
+                            {% else %}
+                                <i class="fas fa-clock"></i>
+                            {% endif %}
+                            {{ scan.status | capitalize }}
+                        </span>
+                    </td>
+                    <td>{{ scan.started_at.strftime('%Y-%m-%d %H:%M') if scan.started_at else '—' }}</td>
+                    <td>{{ scan.completed_at.strftime('%Y-%m-%d %H:%M') if scan.completed_at else '—' }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
     <div class="empty-state">
-        <i class="fas fa-radar empty-icon"></i>
+        <i class="fas fa-magnifying-glass empty-icon"></i>
         <p>No scans yet</p>
         <span>Scans appear here automatically when code is pushed</span>
     </div>
+    {% endif %}
 </div>
 {% endblock %}
